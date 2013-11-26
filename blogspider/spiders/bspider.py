@@ -120,7 +120,7 @@ class MySpider(CrawlSpider):
                     if len(re.compile('\w+ \d+,.\d+').findall(div_html[0]))>10:
                         continue
                     else:
-                        post_text1 = div_text
+                        post_text = div_text
                         div_len = len(div_text)
 
             #if post is in upper /sibling div
