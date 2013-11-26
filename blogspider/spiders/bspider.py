@@ -17,7 +17,7 @@ class MySpider(CrawlSpider):
         self.allowed_domains = self.GetAllowedDomains(csvfile)
         self.start_urls = self.GetStartUrls(csvfile)
         self.rules = (
-            Rule(SgmlLinkExtractor(allow=(),),process_request='add_meta',follow=True,callback='parse_item'),
+            Rule(SgmlLinkExtractor(allow=('/\?p=\d+$'),),process_request='add_meta',follow=True,callback='parse_item'),
             )
 
         super(MySpider, self).__init__()
@@ -138,7 +138,7 @@ class MySpider(CrawlSpider):
                         post_text2 = div_text
                         div_len = len(div_text)
 
-            if len(post_text2)>len(post_text1):
+            if len(post_text2)>len(post_text):
                 post_text = post_text2
 
             #if no post is found in page and post is in 2nd upper div then
