@@ -13,27 +13,26 @@ from copy import deepcopy
 
 class MySpider(CrawlSpider):
     name = 'craig'
-    def __init__(self,csvfile='blogs2copy.csv'):
-        self.allowed_domains= self.GetAllowedDomains(csvfile)
+    def __init__(self,csvfile='blogs2.csv'):
+        self.allowed_domains = self.GetAllowedDomains(csvfile)
         self.start_urls = self.GetStartUrls(csvfile)
         self.rules = (
-            Rule(SgmlLinkExtractor(),process_request='add_meta',follow=True,callback='parse_item'),
+            Rule(SgmlLinkExtractor(allow=(),),process_request='add_meta',follow=True,callback='parse_item'),
             )
-        """
-        self.rules = (
-            Rule(SgmlLinkExtractor(
-                allow=('/[a-z0-9-]+-',),deny=('\?')),process_request='add_meta',follow=True,callback='parse_item'),
-            )
-        """
+
         super(MySpider, self).__init__()
 
     def add_meta(self,request):
-        url_netloc = urlparse(request.url).netloc
+        url_netloc = 'http://'+urlparse(request.url).netloc
         metaid = self.csvdatas_netloc.blog_id[self.csvdatas_netloc.blog_url==url_netloc].tolist()
         request.meta['id'] = metaid[0] if metaid else None
-        return request
+        if urlparse(request.url).netloc.replace('www.','') in self.allowed_domains:
+            return request
 
     def parse_item(self, response):
+        if not urlparse(response.url).netloc.replace('www.','') in self.allowed_domains:
+            print 'not avail'
+            return
         sel = Selector(response)
         date = re.compile('\d+\/\d+\/\d+').findall(response.url)
         title = None
@@ -95,8 +94,6 @@ class MySpider(CrawlSpider):
             if slug_nonum in possible_title_short:
                 title = possible_title
             else:
-                #title = max(len(iterable))
-
                 if not title:
                     title = ar
                     if not title:
@@ -112,18 +109,18 @@ class MySpider(CrawlSpider):
 
         if title:
             post_text = ''
+            post_text1 = ''
             div_len = 0
             post_xpaths = [title_xpath+"/following-sibling::div[1]",title_xpath+"/following-sibling::div[2]",title_xpath+"/following-sibling::div[3]"]
 
             for post_xpath in post_xpaths:
                 div_html = sel.xpath(post_xpath).extract()
                 div_text = nltk.clean_html(' '.join(div_html))
-
                 if len(div_text)>div_len:
                     if len(re.compile('\w+ \d+,.\d+').findall(div_html[0]))>10:
                         continue
                     else:
-                        post_text = div_text
+                        post_text1 = div_text
                         div_len = len(div_text)
 
             #if post is in upper /sibling div
@@ -141,15 +138,16 @@ class MySpider(CrawlSpider):
                         post_text2 = div_text
                         div_len = len(div_text)
 
-            if len(post_text2)>len(post_text):
+            if len(post_text2)>len(post_text1):
                 post_text = post_text2
+
             #if no post is found in page and post is in 2nd upper div then
             if not post_text:
                 post_text = ''
                 div_len = 0
                 post_xpaths3 = [title_xpath+"/../../following-sibling::div[1]",title_xpath+"/following-sibling::div[2]",title_xpath+"/following-sibling::div[3]"]
 
-                for post_xpath in post_xpaths:
+                for post_xpath in post_xpaths3:
                     div_html = sel.xpath(post_xpath).extract()
                     div_text = nltk.clean_html(' '.join(div_html))
 
@@ -163,6 +161,7 @@ class MySpider(CrawlSpider):
             title = self.ExtractAlphanumeric(title) if title else None
             text = self.ExtractAlphanumeric(post_text) if post_text else None
             date = date if date else None
+            date = date[0] if type(date)==list else date
             base_url = urlparse(response.url)
 
             item = BlogItem(blog_url=base_url.netloc,
@@ -213,10 +212,13 @@ class MySpider(CrawlSpider):
         csvdatas_updated = deepcopy(csvdatas)
 
         csvdatas_netloc = deepcopy(csvdatas_updated)
+
         for blog in csvdatas_updated.blog_url:
-            blog_netloc = urlparse(blog).netloc
-            print blog_netloc
+            #blog_netloc = urlparse(blog).netloc
+            blog_netloc = 'http://'+max(blog.split('/'))
             csvdatas_netloc.blog_url[csvdatas_netloc.blog_url==blog]=blog_netloc
+            print blog_netloc
+            #csvdatas_netloc.blog_url[csvdatas_netloc.blog_url==blog]=blog_netloc
         self.csvdatas_netloc = csvdatas_netloc
 
         for blog in csvdatas.blog_url:
