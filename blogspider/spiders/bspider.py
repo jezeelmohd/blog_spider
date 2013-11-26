@@ -17,7 +17,7 @@ class MySpider(CrawlSpider):
         self.allowed_domains = self.GetAllowedDomains(csvfile)
         self.start_urls = self.GetStartUrls(csvfile)
         self.rules = (
-            Rule(SgmlLinkExtractor(allow=(),),process_request='add_meta',follow=True,callback='parse_item'),
+            Rule(SgmlLinkExtractor(allow=('/\?p=\d+$'),),process_request='add_meta',follow=True,callback='parse_item'),
             )
 
         super(MySpider, self).__init__()
@@ -96,14 +96,19 @@ class MySpider(CrawlSpider):
             else:
                 if not title:
                     title = ar
+                    title_xpath = '//h1'
                     if not title:
                         title = er
+                        title_xpath = '//h2/a'
                         if not title:
                             title = br
+                            title_xpath = '//h2'
                             if not title:
                                 title = fr
+                                title_xpath = '//h3/a'
                                 if not title:
                                     title = cr
+                                    title_xpath = '//h3'
 
                 #title = None
 
